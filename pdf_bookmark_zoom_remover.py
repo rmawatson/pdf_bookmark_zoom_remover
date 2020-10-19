@@ -1,4 +1,4 @@
-import pikepdf,sys,os
+import pikepdf,sys,os,argparse
 
 class data:
     _names = None
@@ -41,6 +41,7 @@ def collect_all_names(root):
                 names[parent.Names[index]] = (index+1,parent.Names)
             
     _apply_collect_all_names(root.Names.Dests)
+    
     return names
     
 def get_names(root):
@@ -48,12 +49,13 @@ def get_names(root):
         data._names = collect_all_names(root)
     return data._names
 
-def set_zoom_factor(root,depth,outline_item,zoom_factor): 
+def set_zoom_factor(root,depth,outline_item,zoom_factor,only_bookmarks): 
 
     skipped = False
     if outline_item.action:
         outline_item.action.D = update_dest(zoom_factor,outline_item.action.D)
     elif outline_item.destination != None:
+        if only_bookmarks:
         names = get_names(root)
         if outline_item.destination in names:
             index = names[outline_item.destination][0]
@@ -64,20 +66,25 @@ def set_zoom_factor(root,depth,outline_item,zoom_factor):
     else:
         skipped = True
         
-    
     print(("skipped" if skipped else "updated") + " >> %s %s" % (" "*depth,outline_item.title))
     
     
-def set_all_bookmark_zooms(in_file,out_file=None,zoom_factor=None):
-
+def set_all_bookmark_zooms(in_file,out_file=None,zoom_factor=None,only_bookmarks=False):
+    
     def _apply_set_all_bookmark_zoom(names,depth,children):
         for child in children:
 
-            set_zoom_factor(names,depth,child,zoom_factor)
+            set_zoom_factor(names,depth,child,zoom_factor,only_bookmarks)
             _apply_set_all_bookmark_zoom(names,depth+1,child.children)
     
     pdf = pikepdf.open(in_file)
 
+    if not only_bookmarks:
+        names = get_names(pdf.root)
+        for key,values in names.items():
+            index,array = values
+            array[index] = update_dest(zoom_factor,array[index])
+            
     with pdf.open_outline() as outline:
         _apply_set_all_bookmark_zoom(pdf.root,0,outline.root)
         
@@ -87,12 +94,14 @@ def set_all_bookmark_zooms(in_file,out_file=None,zoom_factor=None):
 
 if __name__ == "__main__":
 
-    if not sys.argv[-1].endswith(".pdf"):
-        print("Requires <name>.pdf argument")
-        sys.exit(0)
+    parser = argparse.ArgumentParser(description='Remove PDF bookmark zooms')
+    parser.add_argument('-z','--zoom', type=float,default=None,
+                        help='set the zoom factor of the bookmarks/links. 0 will inherit the current zoom (default:0)')
+    parser.add_argument('-ob','--only_bookmarks',default=False,action="store_true",
+                        help='only process bookmark links, other clickables in the document are left untouched (default:False)')
+     
+    parser.add_argument('file_name',help='PDF filename to process')     
+    parser.add_argument('-o','--out_file',default=None,help='Output filename')
+    args = parser.parse_args()
         
-    if not os.path.exists(sys.argv[-1]):
-        print("File '%s' not found" % sys.argv[-1])
-        sys.exit(0)
-        
-    set_all_bookmark_zooms(sys.argv[-1])    
+    set_all_bookmark_zooms(args.file_name,args.out_file,args.zoom,args.only_bookmarks)    

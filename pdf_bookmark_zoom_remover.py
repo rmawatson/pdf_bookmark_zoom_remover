@@ -56,7 +56,7 @@ def set_zoom_factor(root,depth,outline_item,zoom_factor,only_bookmarks):
         outline_item.action.D = update_dest(zoom_factor,outline_item.action.D)
     elif outline_item.destination != None:
         if only_bookmarks:
-        names = get_names(root)
+            names = get_names(root)
         if outline_item.destination in names:
             index = names[outline_item.destination][0]
             array = names[outline_item.destination][1]

@@ -15,9 +15,9 @@ def update_dest(zoom_factor,current):
     if dest_type == "/XYZ":
         dest[2] = current[2]
         dest[3] = current[3]
-    elif dest_type in ("/FitH","FitBH"):            
+    elif dest_type in ("/FitH","/FitBH"):            
         dest[3] = current[2]          
-    elif dest_type in ("/FitV","FitBV"):            
+    elif dest_type in ("/FitV","/FitBV"):            
         dest[2] = current[2]          
     elif dest_type == "/FitR":
         dest[2] = current[2]

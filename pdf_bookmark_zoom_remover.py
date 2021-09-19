@@ -1,3 +1,4 @@
+from typing import Union
 import pikepdf,sys,os,argparse
 
 class data:
@@ -69,28 +70,29 @@ def set_zoom_factor(root,depth,outline_item,zoom_factor,only_bookmarks):
     print(("skipped" if skipped else "updated") + " >> %s %s" % (" "*depth,outline_item.title))
     
     
-def set_all_bookmark_zooms(in_file,out_file=None,zoom_factor=None,only_bookmarks=False):
-    
+def set_all_bookmark_zooms(in_files: Union[str, list[str]],out_file=None,zoom_factor=None,only_bookmarks=False):
     def _apply_set_all_bookmark_zoom(names,depth,children):
         for child in children:
-
             set_zoom_factor(names,depth,child,zoom_factor,only_bookmarks)
             _apply_set_all_bookmark_zoom(names,depth+1,child.children)
-    
-    pdf = pikepdf.open(in_file)
 
-    if not only_bookmarks:
-        names = get_names(pdf.root)
-        for key,values in names.items():
-            index,array = values
-            array[index] = update_dest(zoom_factor,array[index])
-            
-    with pdf.open_outline() as outline:
-        _apply_set_all_bookmark_zoom(pdf.root,0,outline.root)
-        
-    save_name = out_file if out_file else in_file.split(".")[0] + "-zoomed.pdf"
-    print("saving %s ..." % save_name) 
-    pdf.save(save_name)
+    if isinstance(in_files,str):
+        in_files = [in_files]
+
+    for in_file in in_files:
+        pdf = pikepdf.open(in_file)
+        if not only_bookmarks:
+            names = get_names(pdf.Root)
+            for values in names.items():
+                index,array = values
+                array[index] = update_dest(zoom_factor,array[index])
+
+        with pdf.open_outline() as outline:
+            _apply_set_all_bookmark_zoom(pdf.Root,0,outline.root)
+
+        save_name = out_file if out_file else in_file.split(".")[0] + "-zoomed.pdf"
+        print("saving %s ..." % save_name)
+        pdf.save(save_name)
 
 if __name__ == "__main__":
 
@@ -99,8 +101,8 @@ if __name__ == "__main__":
                         help='set the zoom factor of the bookmarks/links. 0 will inherit the current zoom (default:0)')
     parser.add_argument('-ob','--only_bookmarks',default=False,action="store_true",
                         help='only process bookmark links, other clickables in the document are left untouched (default:False)')
-     
-    parser.add_argument('file_name',help='PDF filename to process')     
+
+    parser.add_argument('file_name',nargs='+',help='PDF filename(s) to process')
     parser.add_argument('-o','--out_file',default=None,help='Output filename')
     args = parser.parse_args()
         
